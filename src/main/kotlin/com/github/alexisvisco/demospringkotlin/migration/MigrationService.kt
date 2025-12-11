@@ -19,11 +19,6 @@ class MigrationService(
         tracker.createTableIfNotExists()
         prepareMigrations()
 
-        logger.info("Total migrations available: ${migrations.size}")
-        migrations.forEach { migration ->
-            logger.info("  - ${formatVersion(migration)} (${migration.javaClass.simpleName})")
-        }
-
         val applied = tracker.findAll()
         val pending = migrations
             .filterNot { applied.contains(formatVersion(it)) }

@@ -111,7 +111,6 @@ class MigrationGenerator {
 
         val newLine = "        SqlMigration.fromFile(\"db/migrations/${fileName}.sql\"),"
 
-        // Find the listOf( and add the new SQL migration
         val pattern = """(fun allMigrations\([^)]*\): List<Migration> = kotlinMigrations \+ listOf\()""".toRegex()
         val updatedContent = content.replace(pattern, "$1\n$newLine")
 
