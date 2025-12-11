@@ -1,0 +1,93 @@
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8889:8025" # Web interface
+      - "2626:1025" # SMTP server
+    volumes:
+      - mailpit_data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "6789:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    depends_on:
+      - postgres
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=postgres
+      - POSTGRES_SEEDS=postgres
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    ports:
+      - "6790:7233"
+    restart: unless-stopped
+    networks:
+      - app-network
+  temporal-ui:
+    image: temporalio/ui:latest
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8234:8080"
+    restart: unless-stopped
+    networks:
+      - app-network
+  temporal-admin-tools:
+    image: temporalio/admin-tools:latest
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    networks:
+      - app-network
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - app-network
+
+volumes:
+  minio_data:
+  mailpit_data:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
